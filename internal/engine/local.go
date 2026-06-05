@@ -105,13 +105,13 @@ type chatResponse struct {
 }
 
 // Translate traduit un lot via l'API OpenAI-compatible de llama-server.
-func (l *Local) Translate(ctx context.Context, lines, ctxLines []string, srcLang string) ([]string, error) {
+func (l *Local) Translate(ctx context.Context, lines, ctxLines []string, srcLang, tgtLang string) ([]string, error) {
 	if len(lines) == 0 {
 		return nil, nil
 	}
 	reqBody := chatRequest{
 		Model:          "local",
-		Messages:       []chatMessage{{Role: "user", Content: buildPrompt(lines, ctxLines, srcLang)}},
+		Messages:       []chatMessage{{Role: "user", Content: buildPrompt(lines, ctxLines, srcLang, tgtLang)}},
 		Temperature:    0.2,
 		MaxTokens:      2048,
 		ResponseFormat: &respFormat{Type: "json_object"},

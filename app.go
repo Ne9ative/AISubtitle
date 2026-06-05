@@ -106,6 +106,7 @@ type TranslateRequest struct {
 	Model     string `json:"model"`
 	APIKey    string `json:"apiKey"`
 	SrcLang   string `json:"srcLang"`
+	TargetLang string `json:"targetLang"`
 	TrackID   int    `json:"trackID"`
 	TestMode  bool   `json:"testMode"`
 }
@@ -166,6 +167,7 @@ func (a *App) runJob(ctx context.Context, req TranslateRequest) {
 		VideoPath:   req.VideoPath,
 		TrackID:     req.TrackID,
 		SrcLang:     req.SrcLang,
+		TargetLang:  req.TargetLang,
 		BatchSize:   cfg.BatchSize,
 		ContextSize: cfg.ContextSize,
 		TestMode:    req.TestMode,
@@ -192,14 +194,19 @@ func (a *App) runJob(ctx context.Context, req TranslateRequest) {
 
 func (a *App) buildTranslator(ctx context.Context, req TranslateRequest) (engine.Translator, error) {
 	if req.Engine == "Local" {
-		a.Log("Préparation du moteur local (CUDA)…")
-		server, err := runtime.EnsureLlamaServer(ctx, func(stage string, done, total int64) {
+		dl := func(stage string, done, total int64) {
 			wruntime.EventsEmit(a.ctx, "download", map[string]any{"stage": stage, "done": done, "total": total})
-		})
+		}
+		modelPath, err := a.resolveModel(ctx, req.Model, dl)
+		if err != nil {
+			return nil, fmt.Errorf("modèle : %w", err)
+		}
+		a.Log("Préparation du moteur local (CUDA)…")
+		server, err := runtime.EnsureLlamaServer(ctx, dl)
 		if err != nil {
 			return nil, fmt.Errorf("téléchargement du moteur : %w", err)
 		}
-		local := engine.NewLocal(server, filepath.Join(modelsDir(), req.Model))
+		local := engine.NewLocal(server, modelPath)
 		a.Log("Démarrage de llama-server (chargement du modèle sur GPU)…")
 		if err := local.Start(ctx); err != nil {
 			return nil, fmt.Errorf("démarrage du moteur local : %w", err)
@@ -210,6 +217,19 @@ func (a *App) buildTranslator(ctx context.Context, req TranslateRequest) (engine
 		return nil, fmt.Errorf("clé API Gemini manquante")
 	}
 	return engine.NewGemini(req.APIKey, req.Model), nil
+}
+
+// resolveModel renvoie le chemin du modèle local à utiliser ; si aucun modèle
+// valide n'est sélectionné, télécharge le modèle par défaut (Gemma 3 12B).
+func (a *App) resolveModel(ctx context.Context, model string, dl runtime.ProgressFunc) (string, error) {
+	if model != "" {
+		p := filepath.Join(modelsDir(), model)
+		if fi, err := os.Stat(p); err == nil && !fi.IsDir() {
+			return p, nil
+		}
+	}
+	a.Log("Aucun modèle local — téléchargement du modèle par défaut (Gemma 3 12B, ~7 Go)…")
+	return runtime.EnsureDefaultModel(ctx, modelsDir(), dl)
 }
 
 // ---------------------------------------------------------------------------

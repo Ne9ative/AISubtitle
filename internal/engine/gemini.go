@@ -47,12 +47,12 @@ type geminiResponse struct {
 }
 
 // Translate traduit un lot via l'API Gemini.
-func (g *Gemini) Translate(ctx context.Context, lines, ctxLines []string, srcLang string) ([]string, error) {
+func (g *Gemini) Translate(ctx context.Context, lines, ctxLines []string, srcLang, tgtLang string) ([]string, error) {
 	if len(lines) == 0 {
 		return nil, nil
 	}
 	var reqBody geminiRequest
-	reqBody.Contents = []geminiContent{{Parts: []geminiPart{{Text: buildPrompt(lines, ctxLines, srcLang)}}}}
+	reqBody.Contents = []geminiContent{{Parts: []geminiPart{{Text: buildPrompt(lines, ctxLines, srcLang, tgtLang)}}}}
 	reqBody.GenerationConfig.ResponseMimeType = "application/json"
 	body, err := json.Marshal(reqBody)
 	if err != nil {

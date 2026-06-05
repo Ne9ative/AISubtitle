@@ -5,6 +5,7 @@ export namespace config {
 	    model: string;
 	    api_key: string;
 	    source_lang: string;
+	    target_lang: string;
 	    batch_size: number;
 	    context_size: number;
 	
@@ -18,6 +19,7 @@ export namespace config {
 	        this.model = source["model"];
 	        this.api_key = source["api_key"];
 	        this.source_lang = source["source_lang"];
+	        this.target_lang = source["target_lang"];
 	        this.batch_size = source["batch_size"];
 	        this.context_size = source["context_size"];
 	    }
@@ -33,6 +35,7 @@ export namespace main {
 	    model: string;
 	    apiKey: string;
 	    srcLang: string;
+	    targetLang: string;
 	    trackID: number;
 	    testMode: boolean;
 	
@@ -47,6 +50,7 @@ export namespace main {
 	        this.model = source["model"];
 	        this.apiKey = source["apiKey"];
 	        this.srcLang = source["srcLang"];
+	        this.targetLang = source["targetLang"];
 	        this.trackID = source["trackID"];
 	        this.testMode = source["testMode"];
 	    }

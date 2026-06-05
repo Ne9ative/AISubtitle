@@ -1,68 +1,76 @@
 # AI Subtitle Pro
 
-Application Windows de bureau (**Go + Wails**) qui traduit les sous-titres d'une
-vidéo en **français**, soit en **local sur GPU** (llama.cpp, build CUDA), soit via
-l'**API Gemini**.
+A Windows desktop app (**Go + Wails**) that translates a video's subtitles from a
+source language into a target language of your choice — either **locally on the
+GPU** (llama.cpp, CUDA build) or via the **Gemini API**.
 
-> Réécriture en Go d'un ancien outil Python/PyQt, avec une interface repensée,
-> une traduction **par lots avec contexte** (dialogues cohérents) et une
-> distribution en un seul exécutable.
+> A Go rewrite of an older Python/PyQt tool, with a redesigned UI, **batch
+> translation with context** (coherent dialogue), faithful **ASS** handling
+> (positioning and styles preserved), and a single-executable distribution.
 
-## Fonctionnement
+## How it works
 
-1. Glisser-déposer une vidéo (`.mkv`, `.mp4`, `.avi`) — ou parcourir.
-2. Choisir la **piste de sous-titres**, la **langue source** et le **moteur**.
-3. Traduction par lots avec contexte → réassemblage.
-4. Remux d'une nouvelle piste **FR par défaut** → `{nom}_PRO_FR.mkv`
-   (ou `{nom}_TEST_20s.mkv` en mode Test).
+1. Drag & drop a video (`.mkv`, `.mp4`, `.avi`) — or browse.
+2. Pick the **subtitle track**, the **source** and **target** languages, and the
+   **engine** (Local GPU or Gemini).
+3. Subtitles are translated in batches with surrounding context, then reassembled.
+4. A new subtitle track (default-flagged) is muxed back in →
+   `{name}_PRO_FR.mkv` (or `{name}_TEST_20s.mkv` in Test mode).
+
+For **ASS/SubStation** tracks the original file is preserved byte-for-byte
+(header, styles, positioning) and only the dialogue text is replaced, so the
+rendering matches the original exactly. SRT/VTT are handled via `go-astisub`.
 
 ## Distribution
 
-- **Un seul `.exe`** + un dossier **`models/`** (vos fichiers `.gguf`) à côté.
-- `mkvmerge` / `mkvextract` (MKVToolNix) sont **embarqués** puis auto-extraits dans
+- A **single `.exe`** plus a **`models/`** folder (your `.gguf` files) alongside it.
+- `mkvmerge` / `mkvextract` (MKVToolNix) are **embedded** and auto-extracted to
   `%LOCALAPPDATA%\AISubtitlePro\bin\`.
-- `llama-server` (CUDA) est **téléchargé automatiquement** au 1er lancement
-  (~620 Mo) dans ce même cache. Une connexion internet est requise cette
-  première fois ; ensuite tout est local.
+- On the first Local run, the app **auto-downloads** (into that cache / `models/`):
+  - the `llama-server` **CUDA** runtime (~620 MB), and
+  - a default model **Gemma 3 12B (Q4, ~7 GB)** if no `.gguf` is present.
 
-## Développement
+  An internet connection is needed that first time; everything is local afterwards.
 
-**Prérequis :** Go 1.23+, Node 18+, et le CLI Wails :
+## Development
+
+**Prerequisites:** Go 1.23+, Node 18+, and the Wails CLI:
 ```
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 ```
 
-**Préparer les binaires embarqués (avant le build) :** copier `mkvmerge.exe` et
-`mkvextract.exe` (depuis https://mkvtoolnix.download/) dans
-`internal/runtime/binaries/`. Ils ne sont pas versionnés (voir `.gitignore`).
+**Prepare the embedded binaries (before building):** copy `mkvmerge.exe` and
+`mkvextract.exe` (from https://mkvtoolnix.download/) into
+`internal/runtime/binaries/`. They are not versioned (see `.gitignore`).
 
-**Lancer / builder :**
+**Run / build:**
 ```
-wails dev      # développement (hot reload)
-wails build    # produit build/bin/AISubtitlePro.exe
+wails dev      # development (hot reload)
+wails build    # produces build/bin/AISubtitlePro.exe
 ```
 
-**Tests :**
+**Tests:**
 ```
 go test ./...
-# tests d'intégration MKV (optionnels), pointer vers une install MKVToolNix :
-AISUBTITLE_MKVTOOLNIX_DIR="C:\chemin\mkvtoolnix" go test ./internal/mkv/
+# optional MKV integration tests, pointing at a local MKVToolNix install:
+AISUBTITLE_MKVTOOLNIX_DIR="C:\path\to\mkvtoolnix" go test ./internal/mkv/
 ```
 
 ## Architecture
 
-| Paquet | Rôle |
+| Package | Responsibility |
 |---|---|
-| `app.go` / `main.go` | bindings Wails + fenêtre |
-| `internal/config` | chargement/sauvegarde des réglages |
-| `internal/runtime` | embarquage mkvtoolnix + téléchargement llama-server CUDA |
-| `internal/mkv` | scan / extraction / remux (MKVToolNix) |
-| `internal/subs` | lecture/écriture SRT·ASS + découpage en lots+contexte |
-| `internal/engine` | interface `Translator` + `Local` (llama-server) + `Gemini` |
-| `internal/pipeline` | orchestration extraction → traduction → remux |
-| `internal/winproc` | masquage des fenêtres console (Windows) |
+| `app.go` / `main.go` | Wails bindings + window |
+| `internal/config` | load/save settings |
+| `internal/runtime` | embed mkvtoolnix + download llama-server (CUDA) and the default model |
+| `internal/mkv` | scan / extract / mux (MKVToolNix) |
+| `internal/subs` | read/write SRT·VTT (go-astisub) and **raw ASS** + batching with context |
+| `internal/engine` | `Translator` interface + `Local` (llama-server) + `Gemini` |
+| `internal/pipeline` | orchestration: extract → translate → remux |
+| `internal/winproc` | hide console windows (Windows) |
 
-## Licences des composants externes
+## Licenses of bundled components
 
 - **MKVToolNix** (mkvmerge, mkvextract) — GPL-2.0
 - **llama.cpp** (llama-server) — MIT
+- **Gemma** model — Google Gemma Terms of Use

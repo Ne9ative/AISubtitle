@@ -3,10 +3,41 @@ package runtime
 import (
 	"archive/zip"
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+func TestDownloadTo(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("HELLO-MODEL"))
+	}))
+	defer srv.Close()
+	dest := filepath.Join(t.TempDir(), "out.bin")
+	if err := downloadTo(context.Background(), srv.URL, dest, "test", nil); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(dest); string(b) != "HELLO-MODEL" {
+		t.Fatalf("contenu téléchargé = %q", b)
+	}
+}
+
+func TestEnsureDefaultModelSkipsIfPresent(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, defaultModelName)
+	if err := os.WriteFile(dest, []byte("present"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := EnsureDefaultModel(context.Background(), dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != dest {
+		t.Fatalf("got %q, want %q", got, dest)
+	}
+}
 
 func TestUnzipIntoFlattens(t *testing.T) {
 	zipPath := filepath.Join(t.TempDir(), "t.zip")

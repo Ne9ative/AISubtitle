@@ -20,7 +20,7 @@ func TestLocalTranslateOverHTTP(t *testing.T) {
 	defer srv.Close()
 
 	l := &Local{baseURL: srv.URL, client: &http.Client{Timeout: 5 * time.Second}}
-	got, err := l.Translate(context.Background(), []string{"Hi"}, nil, "ANGLAIS")
+	got, err := l.Translate(context.Background(), []string{"Hi"}, nil, "ANGLAIS", "FRANÇAIS")
 	if err != nil {
 		t.Fatal(err)
 	}

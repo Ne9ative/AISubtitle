@@ -7,7 +7,7 @@ import (
 )
 
 func TestBuildPromptContainsEssentials(t *testing.T) {
-	p := buildPrompt([]string{"Hello", "World"}, []string{"Prev line"}, "ANGLAIS")
+	p := buildPrompt([]string{"Hello", "World"}, []string{"Prev line"}, "ANGLAIS", "FRANÇAIS")
 	for _, want := range []string{"ANGLAIS", "FRANÇAIS", "Hello", "World", "Prev line", "translations"} {
 		if !strings.Contains(p, want) {
 			t.Fatalf("le prompt ne contient pas %q\n---\n%s", want, p)

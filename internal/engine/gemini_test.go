@@ -20,7 +20,7 @@ func TestGeminiTranslate(t *testing.T) {
 
 	g := NewGemini("fakekey", "gemini-2.0-flash")
 	g.baseURL = srv.URL
-	got, err := g.Translate(context.Background(), []string{"Hello", "World"}, nil, "ANGLAIS")
+	got, err := g.Translate(context.Background(), []string{"Hello", "World"}, nil, "ANGLAIS", "FRANÇAIS")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestGeminiHTTPError(t *testing.T) {
 
 	g := NewGemini("k", "m")
 	g.baseURL = srv.URL
-	if _, err := g.Translate(context.Background(), []string{"Hi"}, nil, "ANGLAIS"); err == nil {
+	if _, err := g.Translate(context.Background(), []string{"Hi"}, nil, "ANGLAIS", "FRANÇAIS"); err == nil {
 		t.Fatal("attendu une erreur HTTP")
 	}
 }

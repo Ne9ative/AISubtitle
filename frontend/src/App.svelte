@@ -6,12 +6,12 @@
   } from "../wailsjs/go/main/App.js";
   import { EventsOn, OnFileDrop } from "../wailsjs/runtime/runtime.js";
 
-  const LANGS = ["ANGLAIS", "JAPONAIS", "ALLEMAND", "ESPAGNOL", "ITALIEN", "CHINOIS", "COREEN"];
+  const LANGS = ["ANGLAIS", "FRANÇAIS", "JAPONAIS", "ESPAGNOL", "ALLEMAND", "ITALIEN", "PORTUGAIS", "RUSSE", "CHINOIS", "CORÉEN", "ARABE", "NÉERLANDAIS", "POLONAIS", "TURC"];
   const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 
   let videoPath = "", videoName = "", dragging = false, scanning = false;
   let engine = "Local";
-  let models = [], localModel = "", geminiModel = GEMINI_MODELS[0], apiKey = "", srcLang = "ANGLAIS";
+  let models = [], localModel = "", geminiModel = GEMINI_MODELS[0], apiKey = "", srcLang = "ANGLAIS", tgtLang = "FRANÇAIS";
   let tracks = [], selectedTrackId = null;
   let running = false, progress = { done: 0, total: 0 }, download = null;
   let logs = [], result = "", errorMsg = "", logEl;
@@ -20,13 +20,14 @@
   $: selectedTrack = tracks.find((t) => t.ID === selectedTrackId) || null;
   $: canStart =
     !!videoPath && selectedTrack && !selectedTrack.IsImageBased &&
-    (engine === "Local" ? !!localModel : apiKey.trim().length > 0) && !running;
+    (engine === "Local" ? (models.length === 0 || !!localModel) : apiKey.trim().length > 0) && !running;
 
   onMount(async () => {
     try {
       const cfg = await GetConfig();
       engine = cfg.mode === "Gemini" ? "Gemini" : "Local";
       srcLang = cfg.source_lang || "ANGLAIS";
+      tgtLang = cfg.target_lang || "FRANÇAIS";
       apiKey = cfg.api_key || "";
       if (engine === "Gemini" && cfg.model) geminiModel = cfg.model;
       else if (engine === "Local" && cfg.model) localModel = cfg.model;
@@ -103,7 +104,7 @@
     StartTranslation({
       videoPath, engine,
       model: engine === "Local" ? localModel : geminiModel,
-      apiKey, srcLang, trackID: selectedTrackId, testMode,
+      apiKey, srcLang, targetLang: tgtLang, trackID: selectedTrackId, testMode,
     });
   }
 
@@ -114,7 +115,7 @@
       await SaveConfig({
         mode: engine,
         model: engine === "Local" ? localModel : geminiModel,
-        api_key: apiKey, source_lang: srcLang,
+        api_key: apiKey, source_lang: srcLang, target_lang: tgtLang,
         batch_size: 12, context_size: 2,
       });
     } catch (e) {}
@@ -167,7 +168,7 @@
             {#each models as m}<option value={m}>{m}</option>{/each}
           </select>
         {:else}
-          <div class="empty">Aucun modèle — placez vos fichiers <code>.gguf</code> dans le dossier <code>models/</code> à côté de l'exe.</div>
+          <div class="empty"><strong>Gemma 3 12B</strong> (~7 Go) sera téléchargé automatiquement au 1er lancement. (Ou placez vos <code>.gguf</code> dans <code>models/</code>.)</div>
         {/if}
       </label>
     {:else}
@@ -191,18 +192,25 @@
         </select>
       </label>
       <label class="field">
-        <span>Piste de sous-titres</span>
-        <select bind:value={selectedTrackId} disabled={running || !tracks.length}>
-          {#if !tracks.length}
-            <option value={null}>—</option>
-          {:else}
-            {#each tracks as t}
-              <option value={t.ID} disabled={t.IsImageBased}>{trackLabel(t)}</option>
-            {/each}
-          {/if}
+        <span>Langue cible</span>
+        <select bind:value={tgtLang} disabled={running}>
+          {#each LANGS as l}<option value={l}>{l}</option>{/each}
         </select>
       </label>
     </div>
+
+    <label class="field">
+      <span>Piste de sous-titres</span>
+      <select bind:value={selectedTrackId} disabled={running || !tracks.length}>
+        {#if !tracks.length}
+          <option value={null}>—</option>
+        {:else}
+          {#each tracks as t}
+            <option value={t.ID} disabled={t.IsImageBased}>{trackLabel(t)}</option>
+          {/each}
+        {/if}
+      </select>
+    </label>
   </section>
 
   <div class="actions">

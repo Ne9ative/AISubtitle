@@ -29,7 +29,7 @@ func (m *mockExtractor) Mux(ctx context.Context, video, sub, out, lang, trackNam
 // mockTranslator préfixe chaque ligne par "FR:".
 type mockTranslator struct{}
 
-func (mockTranslator) Translate(ctx context.Context, lines, ctxLines []string, srcLang string) ([]string, error) {
+func (mockTranslator) Translate(ctx context.Context, lines, ctxLines []string, srcLang, tgtLang string) ([]string, error) {
 	out := make([]string, len(lines))
 	for i, l := range lines {
 		out[i] = "FR:" + l
@@ -41,7 +41,7 @@ func (mockTranslator) Close() error { return nil }
 // pickyTranslator échoue sur les lots multi-lignes, réussit en solo (teste le repli).
 type pickyTranslator struct{}
 
-func (pickyTranslator) Translate(ctx context.Context, lines, ctxLines []string, srcLang string) ([]string, error) {
+func (pickyTranslator) Translate(ctx context.Context, lines, ctxLines []string, srcLang, tgtLang string) ([]string, error) {
 	if len(lines) > 1 {
 		return nil, fmt.Errorf("lot refusé")
 	}

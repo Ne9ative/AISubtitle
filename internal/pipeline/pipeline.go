@@ -31,15 +31,28 @@ type Options struct {
 	VideoPath   string
 	TrackID     int
 	SrcLang     string
+	TargetLang  string // langue cible (défaut FRANÇAIS si vide)
 	BatchSize   int
 	ContextSize int
 	TestMode    bool
 }
 
-const (
-	testDuration   = 20 * time.Second
-	frenchTrackTag = "Français (IA)"
-)
+const testDuration = 20 * time.Second
+
+// langCodes : nom affiché → code ISO 639-2 (pour la piste MKV).
+var langCodes = map[string]string{
+	"ANGLAIS": "eng", "FRANÇAIS": "fre", "JAPONAIS": "jpn", "ESPAGNOL": "spa",
+	"ALLEMAND": "ger", "ITALIEN": "ita", "PORTUGAIS": "por", "RUSSE": "rus",
+	"CHINOIS": "chi", "CORÉEN": "kor", "ARABE": "ara", "NÉERLANDAIS": "dut",
+	"POLONAIS": "pol", "TURC": "tur",
+}
+
+func langCode(name string) string {
+	if c, ok := langCodes[strings.ToUpper(name)]; ok {
+		return c
+	}
+	return "und"
+}
 
 // Run exécute le pipeline complet et renvoie le chemin de la vidéo produite.
 func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, rep Reporter) (string, error) {
@@ -77,6 +90,10 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 		return "", fmt.Errorf("pipeline: aucun sous-titre traduisible (fichier extrait : %d octets)", size)
 	}
 
+	tgtLang := opts.TargetLang
+	if tgtLang == "" {
+		tgtLang = "FRANÇAIS"
+	}
 	rep.Log(fmt.Sprintf("Traduction de %d lignes…", total))
 	batches := subs.MakeBatches(texts, opts.BatchSize, opts.ContextSize)
 	translated := make([]string, 0, total)
@@ -85,10 +102,10 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 		if err := ctx.Err(); err != nil {
 			return "", err // annulation
 		}
-		out, err := tr.Translate(ctx, b.Lines, b.Context, opts.SrcLang)
+		out, err := tr.Translate(ctx, b.Lines, b.Context, opts.SrcLang, tgtLang)
 		if err != nil {
 			rep.Log(fmt.Sprintf("Lot incertain (%v) — repli ligne par ligne.", err))
-			out = translateLineByLine(ctx, tr, b, opts.SrcLang, rep)
+			out = translateLineByLine(ctx, tr, b, opts.SrcLang, tgtLang, rep)
 		}
 		translated = append(translated, out...)
 		done += len(b.Lines)
@@ -109,7 +126,7 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 
 	outPath := OutputPath(opts.VideoPath, opts.TestMode)
 	rep.Log("Fusion dans la vidéo (remux)…")
-	if err := ex.Mux(ctx, opts.VideoPath, outSub, outPath, "fre", frenchTrackTag); err != nil {
+	if err := ex.Mux(ctx, opts.VideoPath, outSub, outPath, langCode(tgtLang), tgtLang+" (IA)"); err != nil {
 		return "", err
 	}
 	return outPath, nil
@@ -117,10 +134,10 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 
 // translateLineByLine traduit chaque ligne séparément ; si une ligne échoue,
 // on conserve son texte original pour ne pas perdre tout le job.
-func translateLineByLine(ctx context.Context, tr engine.Translator, b subs.Batch, srcLang string, rep Reporter) []string {
+func translateLineByLine(ctx context.Context, tr engine.Translator, b subs.Batch, srcLang, tgtLang string, rep Reporter) []string {
 	out := make([]string, len(b.Lines))
 	for i, line := range b.Lines {
-		res, err := tr.Translate(ctx, []string{line}, b.Context, srcLang)
+		res, err := tr.Translate(ctx, []string{line}, b.Context, srcLang, tgtLang)
 		if err != nil || len(res) != 1 {
 			rep.Log(fmt.Sprintf("Ligne non traduite, original conservé : %q", line))
 			out[i] = line

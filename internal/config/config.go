@@ -11,6 +11,7 @@ type Config struct {
 	Model       string `json:"model"`        // nom de fichier .gguf ou id de modèle Gemini
 	APIKey      string `json:"api_key"`      // clé Gemini (jamais journalisée)
 	SourceLang  string `json:"source_lang"`  // ex. "ANGLAIS"
+	TargetLang  string `json:"target_lang"`  // ex. "FRANÇAIS"
 	BatchSize   int    `json:"batch_size"`   // lignes par lot de traduction
 	ContextSize int    `json:"context_size"` // lignes précédentes données en contexte
 }
@@ -22,6 +23,7 @@ func Default() Config {
 		Model:       "",
 		APIKey:      "",
 		SourceLang:  "ANGLAIS",
+		TargetLang:  "FRANÇAIS",
 		BatchSize:   12,
 		ContextSize: 2,
 	}
