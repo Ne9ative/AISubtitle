@@ -48,6 +48,7 @@ func (l *Local) Start(ctx context.Context) error {
 		"--port", strconv.Itoa(port),
 		"-ngl", "99",
 		"--ctx-size", "4096",
+		"--reasoning-budget", "0", // coupe le "thinking" : sinon content vide + très lent
 	)
 	winproc.HideWindow(cmd)
 	if err := cmd.Start(); err != nil {
@@ -94,6 +95,7 @@ type chatRequest struct {
 	Model          string        `json:"model"`
 	Messages       []chatMessage `json:"messages"`
 	Temperature    float64       `json:"temperature"`
+	MaxTokens      int           `json:"max_tokens,omitempty"`
 	ResponseFormat *respFormat   `json:"response_format,omitempty"`
 }
 type chatResponse struct {
@@ -111,6 +113,7 @@ func (l *Local) Translate(ctx context.Context, lines, ctxLines []string, srcLang
 		Model:          "local",
 		Messages:       []chatMessage{{Role: "user", Content: buildPrompt(lines, ctxLines, srcLang)}},
 		Temperature:    0.2,
+		MaxTokens:      2048,
 		ResponseFormat: &respFormat{Type: "json_object"},
 	}
 	body, err := json.Marshal(reqBody)
