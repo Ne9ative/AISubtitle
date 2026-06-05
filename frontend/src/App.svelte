@@ -25,6 +25,24 @@
   ];
   const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 
+  // Code ISO de la piste → langue source (pour l'auto-sélection).
+  const CODE_TO_LANG = {
+    en: "ANGLAIS", eng: "ANGLAIS",
+    fr: "FRANÇAIS", fre: "FRANÇAIS", fra: "FRANÇAIS",
+    ja: "JAPONAIS", jpn: "JAPONAIS",
+    es: "ESPAGNOL", spa: "ESPAGNOL",
+    de: "ALLEMAND", ger: "ALLEMAND", deu: "ALLEMAND",
+    it: "ITALIEN", ita: "ITALIEN",
+    pt: "PORTUGAIS", por: "PORTUGAIS",
+    ru: "RUSSE", rus: "RUSSE",
+    zh: "CHINOIS", chi: "CHINOIS", zho: "CHINOIS",
+    ko: "CORÉEN", kor: "CORÉEN",
+    ar: "ARABE", ara: "ARABE",
+    nl: "NÉERLANDAIS", dut: "NÉERLANDAIS", nld: "NÉERLANDAIS",
+    pl: "POLONAIS", pol: "POLONAIS",
+    tr: "TURC", tur: "TURC",
+  };
+
   const T = {
     en: {
       tag: "AI subtitle translation — local (CUDA) or Gemini",
@@ -163,6 +181,7 @@
       tracks = tk;
       const firstText = tk.find((x) => !x.IsImageBased);
       selectedTrackId = firstText ? firstText.ID : (tk.length ? tk[0].ID : null);
+      applyTrackLang();
       if (!tk.length) pushLog(t.noTracks);
     } catch (e) { pushLog(t.scan + e); }
     scanning = false;
@@ -173,6 +192,23 @@
     if (tk.Codec) s += ` · ${tk.Codec}`;
     if (tk.IsImageBased) s += t.imageNote;
     return s;
+  }
+
+  // Devine la langue source d'après le code/nom de la piste sélectionnée.
+  function detectSrcLang(tk) {
+    if (!tk) return null;
+    const code = (tk.Language || "").trim().toLowerCase();
+    if (CODE_TO_LANG[code]) return CODE_TO_LANG[code];
+    const name = (tk.Name || "").toLowerCase();
+    for (const l of LANGS) {
+      if (name && (name.includes(l.en.toLowerCase()) || name.includes(l.fr.toLowerCase()))) return l.v;
+    }
+    return null; // non trouvé → on garde la dernière langue source utilisée
+  }
+
+  function applyTrackLang() {
+    const detected = detectSrcLang(tracks.find((x) => x.ID === selectedTrackId));
+    if (detected && detected !== srcLang) { srcLang = detected; persist(); }
   }
 
   async function start(testMode) {
@@ -267,6 +303,19 @@
       </label>
     {/if}
 
+    <label class="field">
+      <span>{t.track}</span>
+      <select bind:value={selectedTrackId} on:change={applyTrackLang} disabled={running || !tracks.length}>
+        {#if !tracks.length}
+          <option value={null}>{t.none}</option>
+        {:else}
+          {#each tracks as tk}
+            <option value={tk.ID} disabled={tk.IsImageBased}>{trackLabel(tk)}</option>
+          {/each}
+        {/if}
+      </select>
+    </label>
+
     <div class="row">
       <label class="field">
         <span>{t.srcLang}</span>
@@ -281,19 +330,6 @@
         </select>
       </label>
     </div>
-
-    <label class="field">
-      <span>{t.track}</span>
-      <select bind:value={selectedTrackId} disabled={running || !tracks.length}>
-        {#if !tracks.length}
-          <option value={null}>{t.none}</option>
-        {:else}
-          {#each tracks as tk}
-            <option value={tk.ID} disabled={tk.IsImageBased}>{trackLabel(tk)}</option>
-          {/each}
-        {/if}
-      </select>
-    </label>
   </section>
 
   <div class="actions">

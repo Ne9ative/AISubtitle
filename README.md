@@ -69,8 +69,11 @@ AISUBTITLE_MKVTOOLNIX_DIR="C:\path\to\mkvtoolnix" go test ./internal/mkv/
 | `internal/pipeline` | orchestration: extract → translate → remux |
 | `internal/winproc` | hide console windows (Windows) |
 
-## Licenses of bundled components
+## License
 
+This project is licensed under the **GNU GPL-3.0** — see [`LICENSE`](LICENSE).
+
+Bundled / downloaded third-party components keep their own licenses:
 - **MKVToolNix** (mkvmerge, mkvextract) — GPL-2.0
 - **llama.cpp** (llama-server) — MIT
 - **Gemma** model — Google Gemma Terms of Use
