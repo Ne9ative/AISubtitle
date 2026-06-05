@@ -41,10 +41,14 @@ const testDuration = 20 * time.Second
 
 // langCodes : nom affiché → code ISO 639-2 (pour la piste MKV).
 var langCodes = map[string]string{
-	"ANGLAIS": "eng", "FRANÇAIS": "fre", "JAPONAIS": "jpn", "ESPAGNOL": "spa",
-	"ALLEMAND": "ger", "ITALIEN": "ita", "PORTUGAIS": "por", "RUSSE": "rus",
-	"CHINOIS": "chi", "CORÉEN": "kor", "ARABE": "ara", "NÉERLANDAIS": "dut",
-	"POLONAIS": "pol", "TURC": "tur",
+	"ANGLAIS": "eng", "FRANÇAIS": "fre", "JAPONAIS": "jpn", "CHINOIS": "chi",
+	"CORÉEN": "kor", "THAÏ": "tha", "VIETNAMIEN": "vie", "INDONÉSIEN": "ind",
+	"MALAIS": "may", "HINDI": "hin", "ESPAGNOL": "spa", "PORTUGAIS": "por",
+	"ALLEMAND": "ger", "ITALIEN": "ita", "RUSSE": "rus", "ARABE": "ara",
+	"TURC": "tur", "NÉERLANDAIS": "dut", "POLONAIS": "pol", "SUÉDOIS": "swe",
+	"NORVÉGIEN": "nor", "DANOIS": "dan", "FINNOIS": "fin", "GREC": "gre",
+	"HÉBREU": "heb", "TCHÈQUE": "cze", "HONGROIS": "hun", "ROUMAIN": "rum",
+	"UKRAINIEN": "ukr", "PERSAN": "per", "FILIPINO": "fil",
 }
 
 func langCode(name string) string {
