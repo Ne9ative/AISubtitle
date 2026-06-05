@@ -60,9 +60,15 @@ func (a *App) ListModels() []string {
 		return out
 	}
 	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(strings.ToLower(e.Name()), ".gguf") {
-			out = append(out, e.Name())
+		name := e.Name()
+		low := strings.ToLower(name)
+		if e.IsDir() || !strings.HasSuffix(low, ".gguf") {
+			continue
 		}
+		if strings.HasPrefix(low, "mmproj") {
+			continue // fichier de projection multimodale, pas un modèle de langue
+		}
+		out = append(out, name)
 	}
 	return out
 }
