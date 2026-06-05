@@ -32,8 +32,8 @@ __pycache__/
 # --- Outils de build CUDA (locaux) ---
 MSBuildExtensions/
 
-# --- Build Go ---
-/build/
+# --- Build Go (on versionne build/windows : icone + manifeste) ---
+build/bin/
 /dist/
 *.test
 *.out

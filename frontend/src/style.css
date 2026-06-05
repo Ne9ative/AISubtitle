@@ -1,0 +1,14 @@
+html {
+    background-color: #0d0d0d;
+    color: #eaeaea;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Roboto", sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+#app {
+    height: 100vh;
+}
