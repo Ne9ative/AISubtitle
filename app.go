@@ -117,7 +117,7 @@ func (a *App) StartTranslation(req TranslateRequest) {
 	a.mu.Lock()
 	if a.running {
 		a.mu.Unlock()
-		a.emitError("Un job est déjà en cours.")
+		a.emitError("A job is already running.")
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -146,7 +146,7 @@ func (a *App) runJob(ctx context.Context, req TranslateRequest) {
 
 	mkvmerge, mkvextract, err := runtime.EnsureMkvtoolnix()
 	if err != nil {
-		a.emitError("Outils MKV indisponibles : " + err.Error())
+		a.emitError("MKV tools unavailable: " + err.Error())
 		return
 	}
 	tool := mkv.Tool{Mkvmerge: mkvmerge, Mkvextract: mkvextract}
@@ -188,7 +188,7 @@ func (a *App) runJob(ctx context.Context, req TranslateRequest) {
 		a.emitError(err.Error())
 		return
 	}
-	a.Log("✨ Terminé : " + filepath.Base(out))
+	a.Log("✨ Done: " + filepath.Base(out))
 	wruntime.EventsEmit(a.ctx, "done", out)
 }
 
@@ -199,22 +199,22 @@ func (a *App) buildTranslator(ctx context.Context, req TranslateRequest) (engine
 		}
 		modelPath, err := a.resolveModel(ctx, req.Model, dl)
 		if err != nil {
-			return nil, fmt.Errorf("modèle : %w", err)
+			return nil, fmt.Errorf("model: %w", err)
 		}
-		a.Log("Préparation du moteur local (CUDA)…")
+		a.Log("Preparing local engine (CUDA)…")
 		server, err := runtime.EnsureLlamaServer(ctx, dl)
 		if err != nil {
-			return nil, fmt.Errorf("téléchargement du moteur : %w", err)
+			return nil, fmt.Errorf("engine download: %w", err)
 		}
 		local := engine.NewLocal(server, modelPath)
-		a.Log("Démarrage de llama-server (chargement du modèle sur GPU)…")
+		a.Log("Starting llama-server (loading model onto GPU)…")
 		if err := local.Start(ctx); err != nil {
-			return nil, fmt.Errorf("démarrage du moteur local : %w", err)
+			return nil, fmt.Errorf("starting local engine: %w", err)
 		}
 		return local, nil
 	}
 	if strings.TrimSpace(req.APIKey) == "" {
-		return nil, fmt.Errorf("clé API Gemini manquante")
+		return nil, fmt.Errorf("Gemini API key missing")
 	}
 	return engine.NewGemini(req.APIKey, req.Model), nil
 }
@@ -228,7 +228,7 @@ func (a *App) resolveModel(ctx context.Context, model string, dl runtime.Progres
 			return p, nil
 		}
 	}
-	a.Log("Aucun modèle local — téléchargement du modèle par défaut (Gemma 3 12B, ~7 Go)…")
+	a.Log("No local model — downloading the default model (Gemma 3 12B, ~7 GB)…")
 	return runtime.EnsureDefaultModel(ctx, modelsDir(), dl)
 }
 
@@ -252,8 +252,8 @@ func (a *App) emitError(msg string) {
 }
 
 func (a *App) emitCancelled() {
-	a.Log("⏹ Annulé.")
-	wruntime.EventsEmit(a.ctx, "error", "Annulé.")
+	a.Log("⏹ Cancelled.")
+	wruntime.EventsEmit(a.ctx, "error", "Cancelled.")
 }
 
 // ---------------------------------------------------------------------------

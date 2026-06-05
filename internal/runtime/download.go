@@ -33,7 +33,7 @@ func EnsureDefaultModel(ctx context.Context, modelsDir string, progress Progress
 	if err := os.MkdirAll(modelsDir, 0o755); err != nil {
 		return "", err
 	}
-	if err := downloadTo(ctx, defaultModelURL, dest, "Téléchargement du modèle Gemma 3 12B (~7 Go)", progress); err != nil {
+	if err := downloadTo(ctx, defaultModelURL, dest, "Downloading Gemma 3 12B model (~7 GB)", progress); err != nil {
 		os.Remove(dest) // nettoyer un téléchargement partiel
 		return "", err
 	}
@@ -62,10 +62,10 @@ func ensureLlamaServerIn(ctx context.Context, base string, progress ProgressFunc
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
-	if err := downloadAndUnzip(ctx, llamaCudaURL, dir, "Téléchargement de llama.cpp (CUDA)", progress); err != nil {
+	if err := downloadAndUnzip(ctx, llamaCudaURL, dir, "Downloading llama.cpp (CUDA)", progress); err != nil {
 		return "", err
 	}
-	if err := downloadAndUnzip(ctx, cudartURL, dir, "Téléchargement du runtime CUDA", progress); err != nil {
+	if err := downloadAndUnzip(ctx, cudartURL, dir, "Downloading CUDA runtime", progress); err != nil {
 		return "", err
 	}
 	if _, err := os.Stat(server); err != nil {

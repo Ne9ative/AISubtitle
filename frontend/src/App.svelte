@@ -6,8 +6,84 @@
   } from "../wailsjs/go/main/App.js";
   import { EventsOn, OnFileDrop } from "../wailsjs/runtime/runtime.js";
 
-  const LANGS = ["ANGLAIS", "FRANÇAIS", "JAPONAIS", "ESPAGNOL", "ALLEMAND", "ITALIEN", "PORTUGAIS", "RUSSE", "CHINOIS", "CORÉEN", "ARABE", "NÉERLANDAIS", "POLONAIS", "TURC"];
+  // Langues : valeur canonique (v, utilisée par le backend) + libellés localisés.
+  const LANGS = [
+    { v: "ANGLAIS", en: "English", fr: "Anglais" },
+    { v: "FRANÇAIS", en: "French", fr: "Français" },
+    { v: "JAPONAIS", en: "Japanese", fr: "Japonais" },
+    { v: "ESPAGNOL", en: "Spanish", fr: "Espagnol" },
+    { v: "ALLEMAND", en: "German", fr: "Allemand" },
+    { v: "ITALIEN", en: "Italian", fr: "Italien" },
+    { v: "PORTUGAIS", en: "Portuguese", fr: "Portugais" },
+    { v: "RUSSE", en: "Russian", fr: "Russe" },
+    { v: "CHINOIS", en: "Chinese", fr: "Chinois" },
+    { v: "CORÉEN", en: "Korean", fr: "Coréen" },
+    { v: "ARABE", en: "Arabic", fr: "Arabe" },
+    { v: "NÉERLANDAIS", en: "Dutch", fr: "Néerlandais" },
+    { v: "POLONAIS", en: "Polish", fr: "Polonais" },
+    { v: "TURC", en: "Turkish", fr: "Turc" },
+  ];
   const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+
+  const T = {
+    en: {
+      tag: "AI subtitle translation — local (CUDA) or Gemini",
+      scanning: "Analyzing tracks…",
+      changeHint: "Click or drop to change",
+      dropHere: "Drop a video here",
+      browseHint: "or click to browse · mkv, mp4, avi",
+      model: "Model (.gguf)",
+      modelEmpty: "<strong>Gemma 3 12B</strong> (~7 GB) will be downloaded automatically on first launch. (Or place your <code>.gguf</code> files in <code>models/</code>.)",
+      apiKey: "Gemini API key",
+      geminiModel: "Gemini model",
+      srcLang: "Source language",
+      tgtLang: "Target language",
+      track: "Subtitle track",
+      test: "Test · 20 s",
+      start: "Start translation",
+      cancel: "Cancel",
+      prep: "Preparing…",
+      lines: "lines",
+      created: "File created: ",
+      unsupported: "⚠️ Unsupported format (mkv, mp4, avi).",
+      noTracks: "⚠️ No subtitle track found in this file.",
+      scan: "❌ Scan: ",
+      cancelReq: "⏹ Cancellation requested…",
+      trackWord: "Track",
+      imageNote: "  (image — not translatable)",
+      none: "—",
+    },
+    fr: {
+      tag: "Traduction de sous-titres par IA — local (CUDA) ou Gemini",
+      scanning: "Analyse des pistes…",
+      changeHint: "Cliquer ou déposer pour changer",
+      dropHere: "Glissez une vidéo ici",
+      browseHint: "ou cliquez pour parcourir · mkv, mp4, avi",
+      model: "Modèle (.gguf)",
+      modelEmpty: "<strong>Gemma 3 12B</strong> (~7 Go) sera téléchargé automatiquement au 1er lancement. (Ou placez vos <code>.gguf</code> dans <code>models/</code>.)",
+      apiKey: "Clé API Gemini",
+      geminiModel: "Modèle Gemini",
+      srcLang: "Langue source",
+      tgtLang: "Langue cible",
+      track: "Piste de sous-titres",
+      test: "Test · 20 s",
+      start: "Démarrer la traduction",
+      cancel: "Annuler",
+      prep: "Préparation…",
+      lines: "lignes",
+      created: "Vidéo créée : ",
+      unsupported: "⚠️ Format non supporté (mkv, mp4, avi).",
+      noTracks: "⚠️ Aucune piste de sous-titres trouvée dans ce fichier.",
+      scan: "❌ Scan : ",
+      cancelReq: "⏹ Annulation demandée…",
+      trackWord: "Piste",
+      imageNote: "  (image — non traduisible)",
+      none: "—",
+    },
+  };
+
+  let uiLang = "en";
+  $: t = T[uiLang] || T.en;
 
   let videoPath = "", videoName = "", dragging = false, scanning = false;
   let engine = "Local";
@@ -17,7 +93,7 @@
   let logs = [], result = "", errorMsg = "", logEl;
 
   $: pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
-  $: selectedTrack = tracks.find((t) => t.ID === selectedTrackId) || null;
+  $: selectedTrack = tracks.find((t2) => t2.ID === selectedTrackId) || null;
   $: canStart =
     !!videoPath && selectedTrack && !selectedTrack.IsImageBased &&
     (engine === "Local" ? (models.length === 0 || !!localModel) : apiKey.trim().length > 0) && !running;
@@ -25,6 +101,7 @@
   onMount(async () => {
     try {
       const cfg = await GetConfig();
+      uiLang = cfg.ui_lang === "fr" ? "fr" : "en";
       engine = cfg.mode === "Gemini" ? "Gemini" : "Local";
       srcLang = cfg.source_lang || "ANGLAIS";
       tgtLang = cfg.target_lang || "FRANÇAIS";
@@ -39,11 +116,11 @@
     EventsOn("download", (d) => (download = d));
     EventsOn("done", (out) => {
       running = false; download = null;
-      result = "Vidéo créée : " + baseName(out);
+      result = baseName(out);
     });
     EventsOn("error", (m) => {
       running = false; download = null;
-      if (m && m !== "Annulé.") errorMsg = m;
+      if (m && m !== "Cancelled.") errorMsg = m;
     });
 
     OnFileDrop((x, y, paths) => {
@@ -58,6 +135,8 @@
       if (!localModel && models.length) localModel = models[0];
     } catch (e) { models = []; }
   }
+
+  function setUI(l) { uiLang = l; persist(); }
 
   const baseName = (p) => (p || "").split(/[\\/]/).pop();
 
@@ -74,25 +153,25 @@
   async function setVideo(path) {
     const lower = (path || "").toLowerCase();
     if (!(lower.endsWith(".mkv") || lower.endsWith(".mp4") || lower.endsWith(".avi"))) {
-      pushLog("⚠️ Format non supporté (mkv, mp4, avi)."); return;
+      pushLog(t.unsupported); return;
     }
     videoPath = path; videoName = baseName(path);
     tracks = []; selectedTrackId = null; result = ""; errorMsg = "";
     scanning = true;
     try {
-      const t = (await ScanTracks(path)) || [];
-      tracks = t;
-      const firstText = t.find((x) => !x.IsImageBased);
-      selectedTrackId = firstText ? firstText.ID : (t.length ? t[0].ID : null);
-      if (!t.length) pushLog("⚠️ Aucune piste de sous-titres trouvée dans ce fichier.");
-    } catch (e) { pushLog("❌ Scan : " + e); }
+      const tk = (await ScanTracks(path)) || [];
+      tracks = tk;
+      const firstText = tk.find((x) => !x.IsImageBased);
+      selectedTrackId = firstText ? firstText.ID : (tk.length ? tk[0].ID : null);
+      if (!tk.length) pushLog(t.noTracks);
+    } catch (e) { pushLog(t.scan + e); }
     scanning = false;
   }
 
-  function trackLabel(t) {
-    let s = `Piste ${t.ID} · ${t.Language || "und"}`;
-    if (t.Codec) s += ` · ${t.Codec}`;
-    if (t.IsImageBased) s += "  (image — non traduisible)";
+  function trackLabel(tk) {
+    let s = `${t.trackWord} ${tk.ID} · ${tk.Language || "und"}`;
+    if (tk.Codec) s += ` · ${tk.Codec}`;
+    if (tk.IsImageBased) s += t.imageNote;
     return s;
   }
 
@@ -108,7 +187,7 @@
     });
   }
 
-  function cancel() { Cancel(); pushLog("⏹ Annulation demandée…"); }
+  function cancel() { Cancel(); pushLog(t.cancelReq); }
 
   async function persist() {
     try {
@@ -116,7 +195,7 @@
         mode: engine,
         model: engine === "Local" ? localModel : geminiModel,
         api_key: apiKey, source_lang: srcLang, target_lang: tgtLang,
-        batch_size: 12, context_size: 2,
+        ui_lang: uiLang, batch_size: 12, context_size: 2,
       });
     } catch (e) {}
   }
@@ -127,9 +206,13 @@
 <main>
   <header class="topbar">
     <div class="logo">AI</div>
-    <div>
+    <div class="titles">
       <h1>AI Subtitle Pro</h1>
-      <p class="tag">Traduction de sous-titres par IA — local (CUDA) ou Gemini</p>
+      <p class="tag">{t.tag}</p>
+    </div>
+    <div class="langtoggle">
+      <button class:active={uiLang === "en"} on:click={() => setUI("en")}>EN</button>
+      <button class:active={uiLang === "fr"} on:click={() => setUI("fr")}>FR</button>
     </div>
   </header>
 
@@ -146,11 +229,11 @@
     {#if videoPath}
       <div class="film">🎬</div>
       <div class="fname">{videoName}</div>
-      <div class="hint">{scanning ? "Analyse des pistes…" : "Cliquer ou déposer pour changer"}</div>
+      <div class="hint">{scanning ? t.scanning : t.changeHint}</div>
     {:else}
       <div class="film">⬇</div>
-      <div class="fname">Glissez une vidéo ici</div>
-      <div class="hint">ou cliquez pour parcourir · mkv, mp4, avi</div>
+      <div class="fname">{t.dropHere}</div>
+      <div class="hint">{t.browseHint}</div>
     {/if}
   </button>
 
@@ -162,22 +245,22 @@
 
     {#if engine === "Local"}
       <label class="field">
-        <span>Modèle (.gguf)</span>
+        <span>{t.model}</span>
         {#if models.length}
           <select bind:value={localModel} disabled={running}>
             {#each models as m}<option value={m}>{m}</option>{/each}
           </select>
         {:else}
-          <div class="empty"><strong>Gemma 3 12B</strong> (~7 Go) sera téléchargé automatiquement au 1er lancement. (Ou placez vos <code>.gguf</code> dans <code>models/</code>.)</div>
+          <div class="empty">{@html t.modelEmpty}</div>
         {/if}
       </label>
     {:else}
       <label class="field">
-        <span>Clé API Gemini</span>
+        <span>{t.apiKey}</span>
         <input type="password" bind:value={apiKey} placeholder="AIza…" disabled={running} />
       </label>
       <label class="field">
-        <span>Modèle Gemini</span>
+        <span>{t.geminiModel}</span>
         <select bind:value={geminiModel} disabled={running}>
           {#each GEMINI_MODELS as m}<option value={m}>{m}</option>{/each}
         </select>
@@ -186,27 +269,27 @@
 
     <div class="row">
       <label class="field">
-        <span>Langue source</span>
+        <span>{t.srcLang}</span>
         <select bind:value={srcLang} disabled={running}>
-          {#each LANGS as l}<option value={l}>{l}</option>{/each}
+          {#each LANGS as l}<option value={l.v}>{l[uiLang]}</option>{/each}
         </select>
       </label>
       <label class="field">
-        <span>Langue cible</span>
+        <span>{t.tgtLang}</span>
         <select bind:value={tgtLang} disabled={running}>
-          {#each LANGS as l}<option value={l}>{l}</option>{/each}
+          {#each LANGS as l}<option value={l.v}>{l[uiLang]}</option>{/each}
         </select>
       </label>
     </div>
 
     <label class="field">
-      <span>Piste de sous-titres</span>
+      <span>{t.track}</span>
       <select bind:value={selectedTrackId} disabled={running || !tracks.length}>
         {#if !tracks.length}
-          <option value={null}>—</option>
+          <option value={null}>{t.none}</option>
         {:else}
-          {#each tracks as t}
-            <option value={t.ID} disabled={t.IsImageBased}>{trackLabel(t)}</option>
+          {#each tracks as tk}
+            <option value={tk.ID} disabled={tk.IsImageBased}>{trackLabel(tk)}</option>
           {/each}
         {/if}
       </select>
@@ -215,26 +298,26 @@
 
   <div class="actions">
     {#if running}
-      <button class="btn danger" on:click={cancel}>Annuler</button>
+      <button class="btn danger" on:click={cancel}>{t.cancel}</button>
     {:else}
-      <button class="btn ghost" on:click={() => start(true)} disabled={!canStart}>Test · 20 s</button>
-      <button class="btn primary" on:click={() => start(false)} disabled={!canStart}>Démarrer la traduction</button>
+      <button class="btn ghost" on:click={() => start(true)} disabled={!canStart}>{t.test}</button>
+      <button class="btn primary" on:click={() => start(false)} disabled={!canStart}>{t.start}</button>
     {/if}
   </div>
 
   {#if running || pct > 0 || download}
     <section class="card progress-card">
       {#if download}
-        <div class="pline">{download.stage} · {fmtMB(download.done)}{download.total > 0 ? " / " + fmtMB(download.total) : ""} Mo</div>
+        <div class="pline">{download.stage} · {fmtMB(download.done)}{download.total > 0 ? " / " + fmtMB(download.total) : ""} MB</div>
         <div class="bar"><div class="fill" style="width:{download.total > 0 ? Math.round((download.done / download.total) * 100) : 25}%"></div></div>
       {:else}
-        <div class="pline">{progress.total > 0 ? `${progress.done} / ${progress.total} lignes` : "Préparation…"} · {pct}%</div>
+        <div class="pline">{progress.total > 0 ? `${progress.done} / ${progress.total} ${t.lines}` : t.prep} · {pct}%</div>
         <div class="bar"><div class="fill" style="width:{pct}%"></div></div>
       {/if}
     </section>
   {/if}
 
-  {#if result}<div class="banner ok">✅ {result}</div>{/if}
+  {#if result}<div class="banner ok">✅ {t.created}{result}</div>{/if}
   {#if errorMsg}<div class="banner err">⚠️ {errorMsg}</div>{/if}
 
   {#if logs.length}
@@ -254,6 +337,7 @@
     gap: 16px;
   }
   .topbar { display: flex; align-items: center; gap: 14px; }
+  .titles { flex: 1; min-width: 0; }
   .logo {
     width: 44px; height: 44px; border-radius: 12px;
     display: grid; place-items: center; font-weight: 800; font-size: 15px; color: #fff;
@@ -262,6 +346,16 @@
   }
   h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
   .tag { margin: 2px 0 0; color: #8a8a93; font-size: 12.5px; }
+
+  .langtoggle {
+    display: flex; gap: 3px; background: #0f0f12;
+    padding: 3px; border-radius: 9px; border: 1px solid #24242b;
+  }
+  .langtoggle button {
+    border: none; background: transparent; color: #9a9aa3; cursor: pointer;
+    font: inherit; font-weight: 700; font-size: 12px; padding: 5px 9px; border-radius: 6px;
+  }
+  .langtoggle button.active { background: #2a2a32; color: #fff; }
 
   .dropzone {
     width: 100%; box-sizing: border-box;

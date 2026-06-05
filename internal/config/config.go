@@ -12,6 +12,7 @@ type Config struct {
 	APIKey      string `json:"api_key"`      // clé Gemini (jamais journalisée)
 	SourceLang  string `json:"source_lang"`  // ex. "ANGLAIS"
 	TargetLang  string `json:"target_lang"`  // ex. "FRANÇAIS"
+	UILang      string `json:"ui_lang"`      // langue de l'interface : "en" ou "fr"
 	BatchSize   int    `json:"batch_size"`   // lignes par lot de traduction
 	ContextSize int    `json:"context_size"` // lignes précédentes données en contexte
 }
@@ -24,6 +25,7 @@ func Default() Config {
 		APIKey:      "",
 		SourceLang:  "ANGLAIS",
 		TargetLang:  "FRANÇAIS",
+		UILang:      "en",
 		BatchSize:   12,
 		ContextSize: 2,
 	}

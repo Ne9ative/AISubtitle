@@ -6,6 +6,7 @@ export namespace config {
 	    api_key: string;
 	    source_lang: string;
 	    target_lang: string;
+	    ui_lang: string;
 	    batch_size: number;
 	    context_size: number;
 	
@@ -20,6 +21,7 @@ export namespace config {
 	        this.api_key = source["api_key"];
 	        this.source_lang = source["source_lang"];
 	        this.target_lang = source["target_lang"];
+	        this.ui_lang = source["ui_lang"];
 	        this.batch_size = source["batch_size"];
 	        this.context_size = source["context_size"];
 	    }

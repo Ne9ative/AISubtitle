@@ -66,7 +66,7 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 	}
 	defer os.Remove(tmpSrt)
 
-	rep.Log("Extraction de la piste de sous-titres…")
+	rep.Log("Extracting subtitle track…")
 	if err := ex.ExtractTrack(ctx, opts.VideoPath, opts.TrackID, tmpSrt); err != nil {
 		return "", err
 	}
@@ -77,7 +77,7 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 	}
 	if opts.TestMode {
 		sub.LimitToDuration(testDuration)
-		rep.Log("Mode Test : limité aux 20 premières secondes.")
+		rep.Log("Test mode: limited to the first 20 seconds.")
 	}
 
 	texts := sub.Texts()
@@ -87,14 +87,14 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 		if fi, e := os.Stat(tmpSrt); e == nil {
 			size = fi.Size()
 		}
-		return "", fmt.Errorf("pipeline: aucun sous-titre traduisible (fichier extrait : %d octets)", size)
+		return "", fmt.Errorf("pipeline: no translatable subtitles (extracted file: %d bytes)", size)
 	}
 
 	tgtLang := opts.TargetLang
 	if tgtLang == "" {
 		tgtLang = "FRANÇAIS"
 	}
-	rep.Log(fmt.Sprintf("Traduction de %d lignes…", total))
+	rep.Log(fmt.Sprintf("Translating %d lines…", total))
 	batches := subs.MakeBatches(texts, opts.BatchSize, opts.ContextSize)
 	translated := make([]string, 0, total)
 	done := 0
@@ -104,7 +104,7 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 		}
 		out, err := tr.Translate(ctx, b.Lines, b.Context, opts.SrcLang, tgtLang)
 		if err != nil {
-			rep.Log(fmt.Sprintf("Lot incertain (%v) — repli ligne par ligne.", err))
+			rep.Log(fmt.Sprintf("Uncertain batch (%v) — falling back line by line.", err))
 			out = translateLineByLine(ctx, tr, b, opts.SrcLang, tgtLang, rep)
 		}
 		translated = append(translated, out...)
@@ -125,7 +125,7 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 	}
 
 	outPath := OutputPath(opts.VideoPath, opts.TestMode)
-	rep.Log("Fusion dans la vidéo (remux)…")
+	rep.Log("Muxing into the video…")
 	if err := ex.Mux(ctx, opts.VideoPath, outSub, outPath, langCode(tgtLang), tgtLang+" (IA)"); err != nil {
 		return "", err
 	}
@@ -139,7 +139,7 @@ func translateLineByLine(ctx context.Context, tr engine.Translator, b subs.Batch
 	for i, line := range b.Lines {
 		res, err := tr.Translate(ctx, []string{line}, b.Context, srcLang, tgtLang)
 		if err != nil || len(res) != 1 {
-			rep.Log(fmt.Sprintf("Ligne non traduite, original conservé : %q", line))
+			rep.Log(fmt.Sprintf("Line not translated, original kept: %q", line))
 			out[i] = line
 			continue
 		}
