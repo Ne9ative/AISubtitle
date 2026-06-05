@@ -5,3 +5,39 @@
 export function AppInfo() {
   return window['go']['main']['App']['AppInfo']();
 }
+
+export function Cancel() {
+  return window['go']['main']['App']['Cancel']();
+}
+
+export function GetConfig() {
+  return window['go']['main']['App']['GetConfig']();
+}
+
+export function ListModels() {
+  return window['go']['main']['App']['ListModels']();
+}
+
+export function Log(arg1) {
+  return window['go']['main']['App']['Log'](arg1);
+}
+
+export function Progress(arg1, arg2) {
+  return window['go']['main']['App']['Progress'](arg1, arg2);
+}
+
+export function SaveConfig(arg1) {
+  return window['go']['main']['App']['SaveConfig'](arg1);
+}
+
+export function ScanTracks(arg1) {
+  return window['go']['main']['App']['ScanTracks'](arg1);
+}
+
+export function SelectVideo() {
+  return window['go']['main']['App']['SelectVideo']();
+}
+
+export function StartTranslation(arg1) {
+  return window['go']['main']['App']['StartTranslation'](arg1);
+}
