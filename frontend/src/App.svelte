@@ -25,23 +25,27 @@
   ];
   const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 
-  // Code ISO de la piste → langue source (pour l'auto-sélection).
-  const CODE_TO_LANG = {
-    en: "ANGLAIS", eng: "ANGLAIS",
-    fr: "FRANÇAIS", fre: "FRANÇAIS", fra: "FRANÇAIS",
-    ja: "JAPONAIS", jpn: "JAPONAIS",
-    es: "ESPAGNOL", spa: "ESPAGNOL",
-    de: "ALLEMAND", ger: "ALLEMAND", deu: "ALLEMAND",
-    it: "ITALIEN", ita: "ITALIEN",
-    pt: "PORTUGAIS", por: "PORTUGAIS",
-    ru: "RUSSE", rus: "RUSSE",
-    zh: "CHINOIS", chi: "CHINOIS", zho: "CHINOIS",
-    ko: "CORÉEN", kor: "CORÉEN",
-    ar: "ARABE", ara: "ARABE",
-    nl: "NÉERLANDAIS", dut: "NÉERLANDAIS", nld: "NÉERLANDAIS",
-    pl: "POLONAIS", pol: "POLONAIS",
-    tr: "TURC", tur: "TURC",
+  // Tous les alias possibles (codes ISO 639-1/2, noms EN/FR/natifs) → langue source.
+  // Tout est normalisé sans accent / minuscules.
+  const LANG_ALIASES = {
+    "ANGLAIS":     ["en", "eng", "english", "anglais"],
+    "FRANÇAIS":    ["fr", "fre", "fra", "french", "francais"],
+    "JAPONAIS":    ["ja", "jpn", "jp", "japanese", "japonais"],
+    "ESPAGNOL":    ["es", "spa", "spanish", "espagnol", "espanol", "castellano"],
+    "ALLEMAND":    ["de", "ger", "deu", "german", "allemand", "deutsch"],
+    "ITALIEN":     ["it", "ita", "italian", "italien", "italiano"],
+    "PORTUGAIS":   ["pt", "por", "portuguese", "portugais", "portugues"],
+    "RUSSE":       ["ru", "rus", "russian", "russe"],
+    "CHINOIS":     ["zh", "chi", "zho", "cmn", "chinese", "chinois"],
+    "CORÉEN":      ["ko", "kor", "korean", "coreen"],
+    "ARABE":       ["ar", "ara", "arabic", "arabe"],
+    "NÉERLANDAIS": ["nl", "dut", "nld", "dutch", "neerlandais", "nederlands"],
+    "POLONAIS":    ["pl", "pol", "polish", "polonais", "polski"],
+    "TURC":        ["tr", "tur", "turkish", "turc"],
   };
+
+  // Minuscules + suppression des accents (français → francais, coréen → coreen).
+  const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
   const T = {
     en: {
@@ -194,14 +198,18 @@
     return s;
   }
 
-  // Devine la langue source d'après le code/nom de la piste sélectionnée.
+  // Devine la langue source d'après le code ET le nom de la piste.
   function detectSrcLang(tk) {
     if (!tk) return null;
-    const code = (tk.Language || "").trim().toLowerCase();
-    if (CODE_TO_LANG[code]) return CODE_TO_LANG[code];
-    const name = (tk.Name || "").toLowerCase();
-    for (const l of LANGS) {
-      if (name && (name.includes(l.en.toLowerCase()) || name.includes(l.fr.toLowerCase()))) return l.v;
+    const hay = norm((tk.Language || "") + " " + (tk.Name || ""));
+    const tokens = new Set(hay.split(/[^a-z0-9]+/).filter(Boolean));
+    // 1) token exact (code "fr"/"eng" ou mot "french") — fiable, zéro faux positif
+    for (const [val, aliases] of Object.entries(LANG_ALIASES)) {
+      for (const a of aliases) if (tokens.has(a)) return val;
+    }
+    // 2) repli : nom complet (≥4 lettres) contenu n'importe où, ex. "english(forced)"
+    for (const [val, aliases] of Object.entries(LANG_ALIASES)) {
+      for (const a of aliases) if (a.length >= 4 && hay.includes(a)) return val;
     }
     return null; // non trouvé → on garde la dernière langue source utilisée
   }
