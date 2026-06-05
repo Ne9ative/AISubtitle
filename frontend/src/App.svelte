@@ -239,15 +239,15 @@
 
   <section class="card">
     <div class="seg">
-      <button class:active={engine === "Local"} on:click={() => (engine = "Local")} disabled={running}>Local · GPU</button>
-      <button class:active={engine === "Gemini"} on:click={() => (engine = "Gemini")} disabled={running}>Gemini · API</button>
+      <button class:active={engine === "Local"} on:click={() => { engine = "Local"; persist(); }} disabled={running}>Local · GPU</button>
+      <button class:active={engine === "Gemini"} on:click={() => { engine = "Gemini"; persist(); }} disabled={running}>Gemini · API</button>
     </div>
 
     {#if engine === "Local"}
       <label class="field">
         <span>{t.model}</span>
         {#if models.length}
-          <select bind:value={localModel} disabled={running}>
+          <select bind:value={localModel} on:change={persist} disabled={running}>
             {#each models as m}<option value={m}>{m}</option>{/each}
           </select>
         {:else}
@@ -257,11 +257,11 @@
     {:else}
       <label class="field">
         <span>{t.apiKey}</span>
-        <input type="password" bind:value={apiKey} placeholder="AIza…" disabled={running} />
+        <input type="password" bind:value={apiKey} on:change={persist} placeholder="AIza…" disabled={running} />
       </label>
       <label class="field">
         <span>{t.geminiModel}</span>
-        <select bind:value={geminiModel} disabled={running}>
+        <select bind:value={geminiModel} on:change={persist} disabled={running}>
           {#each GEMINI_MODELS as m}<option value={m}>{m}</option>{/each}
         </select>
       </label>
@@ -270,13 +270,13 @@
     <div class="row">
       <label class="field">
         <span>{t.srcLang}</span>
-        <select bind:value={srcLang} disabled={running}>
+        <select bind:value={srcLang} on:change={persist} disabled={running}>
           {#each LANGS as l}<option value={l.v}>{l[uiLang]}</option>{/each}
         </select>
       </label>
       <label class="field">
         <span>{t.tgtLang}</span>
-        <select bind:value={tgtLang} disabled={running}>
+        <select bind:value={tgtLang} on:change={persist} disabled={running}>
           {#each LANGS as l}<option value={l.v}>{l[uiLang]}</option>{/each}
         </select>
       </label>
