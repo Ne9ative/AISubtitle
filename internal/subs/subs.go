@@ -1,7 +1,10 @@
 package subs
 
 import (
+	"bytes"
 	"fmt"
+	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,14 +16,32 @@ type Subtitle struct {
 	doc *astisub.Subtitles
 }
 
-// Open lit un fichier de sous-titres. Le format est détecté par
-// l'extension (.srt, .ass/.ssa, .vtt...).
+// Open lit un fichier de sous-titres en détectant le format au CONTENU
+// (l'extension du fichier extrait par mkvextract n'est pas fiable : il écrit
+// le codec natif — SRT, ASS/SSA ou VTT — quel que soit le nom du fichier).
 func Open(path string) (*Subtitle, error) {
-	doc, err := astisub.OpenFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("subs: ouverture %q: %w", path, err)
+		return nil, fmt.Errorf("subs: lecture %q: %w", path, err)
+	}
+	doc, err := parse(data)
+	if err != nil {
+		return nil, fmt.Errorf("subs: analyse %q: %w", path, err)
 	}
 	return &Subtitle{doc: doc}, nil
+}
+
+func parse(data []byte) (*astisub.Subtitles, error) {
+	trimmed := bytes.TrimLeft(data, "\xef\xbb\xbf \t\r\n") // BOM + espaces de tête
+	head := strings.ToLower(string(trimmed[:min(len(trimmed), 300)]))
+	switch {
+	case strings.Contains(head, "[script info]"), strings.Contains(head, "[v4"):
+		return astisub.ReadFromSSA(bytes.NewReader(data))
+	case strings.HasPrefix(head, "webvtt"):
+		return astisub.ReadFromWebVTT(bytes.NewReader(data))
+	default:
+		return astisub.ReadFromSRT(bytes.NewReader(data))
+	}
 }
 
 // Len renvoie le nombre de sous-titres (cues).
@@ -82,8 +103,13 @@ func itemText(it *astisub.Item) string {
 	return flatten(sb.String())
 }
 
+// assTagRe capture les balises d'override ASS, ex. {\i1}, {\an8}, {\pos(...)}.
+var assTagRe = regexp.MustCompile(`\{[^}]*\}`)
+
 func flatten(s string) string {
-	return strings.TrimSpace(strings.ReplaceAll(s, "\n", " "))
+	s = assTagRe.ReplaceAllString(s, "")
+	s = strings.ReplaceAll(s, "\n", " ")
+	return strings.TrimSpace(s)
 }
 
 func textToLines(text string) []astisub.Line {

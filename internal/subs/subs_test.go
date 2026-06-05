@@ -67,6 +67,35 @@ func TestSetTextsAndSaveRoundtrip(t *testing.T) {
 	}
 }
 
+const sampleASS = `[Script Info]
+Title: Test
+ScriptType: v4.00+
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:04.00,Default,,0,0,0,,Hello {\i1}world{\i0}
+Dialogue: 0,0:00:05.00,0:00:07.00,Default,,0,0,0,,Second line
+`
+
+// Un fichier nommé .srt mais au contenu ASS doit être détecté au contenu.
+func TestOpenASSByContent(t *testing.T) {
+	s, err := Open(writeTemp(t, "track.srt", sampleASS))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Len() != 2 {
+		t.Fatalf("attendu 2 cues ASS, got %d", s.Len())
+	}
+	want := []string{"Hello world", "Second line"}
+	if got := s.Texts(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("Texts() ASS = %v, attendu %v", got, want)
+	}
+}
+
 func TestLimitToDuration(t *testing.T) {
 	s, _ := Open(writeTemp(t, "in.srt", sampleSRT)) // cues à 1s et 5s
 	s.LimitToDuration(3 * time.Second)

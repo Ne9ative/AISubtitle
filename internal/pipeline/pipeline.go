@@ -70,7 +70,11 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 	texts := sub.Texts()
 	total := len(texts)
 	if total == 0 {
-		return "", fmt.Errorf("pipeline: aucun sous-titre à traduire")
+		size := int64(-1)
+		if fi, e := os.Stat(tmpSrt); e == nil {
+			size = fi.Size()
+		}
+		return "", fmt.Errorf("pipeline: aucun sous-titre traduisible (fichier extrait : %d octets)", size)
 	}
 
 	rep.Log(fmt.Sprintf("Traduction de %d lignes…", total))
