@@ -9,25 +9,23 @@ import (
 // buildPrompt construit l'instruction de traduction vers le français,
 // demandant une sortie JSON stricte alignée 1:1 sur les lignes d'entrée.
 func buildPrompt(lines, ctxLines []string, srcLang string) string {
+	linesJSON, _ := json.Marshal(lines)
 	var sb strings.Builder
 	sb.WriteString("Tu es un traducteur professionnel de sous-titres. ")
-	sb.WriteString("Traduis les LIGNES À TRADUIRE depuis le ")
+	sb.WriteString("Traduis CHAQUE élément du tableau JSON ci-dessous depuis le ")
 	sb.WriteString(srcLang)
 	sb.WriteString(" vers le FRANÇAIS, en gardant le ton, le registre et la concision d'un sous-titre.\n")
-	sb.WriteString("Ne traduis PAS le contexte (il sert seulement de référence).\n")
-	sb.WriteString(fmt.Sprintf("Réponds UNIQUEMENT par un objet JSON : {\"translations\": [...]} contenant EXACTEMENT %d traductions, dans le même ordre.\n", len(lines)))
+	sb.WriteString("Traduis tout le texte, mais NE touche pas à la numérotation : si une ligne commence par un chiffre (ex. \"1.\"), garde ce chiffre tel quel, et n'ajoute jamais de numéro qui n'existe pas. ")
+	sb.WriteString("Ne fusionne pas, ne supprime pas, n'invente rien.\n")
 	if len(ctxLines) > 0 {
-		sb.WriteString("\nCONTEXTE (ne pas traduire) :\n")
-		for _, c := range ctxLines {
-			sb.WriteString("- ")
-			sb.WriteString(c)
-			sb.WriteString("\n")
-		}
+		ctxJSON, _ := json.Marshal(ctxLines)
+		sb.WriteString("Contexte précédent (NE PAS traduire, seulement pour la cohérence) : ")
+		sb.Write(ctxJSON)
+		sb.WriteString("\n")
 	}
-	sb.WriteString(fmt.Sprintf("\nLIGNES À TRADUIRE (%d) :\n", len(lines)))
-	for i, l := range lines {
-		sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, l))
-	}
+	sb.WriteString(fmt.Sprintf("Réponds UNIQUEMENT par un objet JSON {\"translations\": [...]} contenant EXACTEMENT %d traductions, dans le même ordre que l'entrée.\n", len(lines)))
+	sb.WriteString("À traduire : ")
+	sb.Write(linesJSON)
 	return sb.String()
 }
 
