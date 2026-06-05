@@ -98,18 +98,18 @@ func Run(ctx context.Context, ex Extractor, tr engine.Translator, opts Options, 
 	if err := sub.SetTexts(translated); err != nil {
 		return "", err
 	}
-	outSrt, err := tempFile("aisub-final-*.srt")
+	outSub, err := tempFile("aisub-final-*" + sub.Ext())
 	if err != nil {
 		return "", err
 	}
-	defer os.Remove(outSrt)
-	if err := sub.SaveSRT(outSrt); err != nil {
+	defer os.Remove(outSub)
+	if err := sub.Save(outSub); err != nil {
 		return "", err
 	}
 
 	outPath := OutputPath(opts.VideoPath, opts.TestMode)
 	rep.Log("Fusion dans la vidéo (remux)…")
-	if err := ex.Mux(ctx, opts.VideoPath, outSrt, outPath, "fre", frenchTrackTag); err != nil {
+	if err := ex.Mux(ctx, opts.VideoPath, outSub, outPath, "fre", frenchTrackTag); err != nil {
 		return "", err
 	}
 	return outPath, nil

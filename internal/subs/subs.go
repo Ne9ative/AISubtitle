@@ -13,7 +13,8 @@ import (
 
 // Subtitle encapsule un document de sous-titres pour la traduction.
 type Subtitle struct {
-	doc *astisub.Subtitles
+	doc    *astisub.Subtitles
+	format string // "srt", "ass" ou "vtt"
 }
 
 // Open lit un fichier de sous-titres en détectant le format au CONTENU
@@ -24,23 +25,26 @@ func Open(path string) (*Subtitle, error) {
 	if err != nil {
 		return nil, fmt.Errorf("subs: lecture %q: %w", path, err)
 	}
-	doc, err := parse(data)
+	doc, format, err := parse(data)
 	if err != nil {
 		return nil, fmt.Errorf("subs: analyse %q: %w", path, err)
 	}
-	return &Subtitle{doc: doc}, nil
+	return &Subtitle{doc: doc, format: format}, nil
 }
 
-func parse(data []byte) (*astisub.Subtitles, error) {
+func parse(data []byte) (*astisub.Subtitles, string, error) {
 	trimmed := bytes.TrimLeft(data, "\xef\xbb\xbf \t\r\n") // BOM + espaces de tête
 	head := strings.ToLower(string(trimmed[:min(len(trimmed), 300)]))
 	switch {
 	case strings.Contains(head, "[script info]"), strings.Contains(head, "[v4"):
-		return astisub.ReadFromSSA(bytes.NewReader(data))
+		doc, err := astisub.ReadFromSSA(bytes.NewReader(data))
+		return doc, "ass", err
 	case strings.HasPrefix(head, "webvtt"):
-		return astisub.ReadFromWebVTT(bytes.NewReader(data))
+		doc, err := astisub.ReadFromWebVTT(bytes.NewReader(data))
+		return doc, "vtt", err
 	default:
-		return astisub.ReadFromSRT(bytes.NewReader(data))
+		doc, err := astisub.ReadFromSRT(bytes.NewReader(data))
+		return doc, "srt", err
 	}
 }
 
@@ -64,7 +68,42 @@ func (s *Subtitle) SetTexts(translated []string) error {
 		return fmt.Errorf("subs: %d traductions pour %d sous-titres", len(translated), len(s.doc.Items))
 	}
 	for i, it := range s.doc.Items {
-		it.Lines = textToLines(translated[i])
+		setItemText(it, translated[i])
+	}
+	return nil
+}
+
+// setItemText remplace le texte affiché en CONSERVANT le 1er LineItem, qui
+// porte les balises de positionnement ASS ({\pos}, {\an}…) dans son SSAEffect.
+// Sans ça, l'ASS perdrait son placement à l'écran (lignes empilées en vrac).
+func setItemText(it *astisub.Item, text string) {
+	text = strings.ReplaceAll(text, "\n", " ")
+	if len(it.Lines) > 0 && len(it.Lines[0].Items) > 0 {
+		first := it.Lines[0].Items[0]
+		first.Text = text
+		it.Lines = it.Lines[:1]
+		it.Lines[0].Items = []astisub.LineItem{first}
+		return
+	}
+	it.Lines = []astisub.Line{{Items: []astisub.LineItem{{Text: text}}}}
+}
+
+// Ext renvoie l'extension du format source (.ass / .vtt / .srt).
+func (s *Subtitle) Ext() string {
+	switch s.format {
+	case "ass":
+		return ".ass"
+	case "vtt":
+		return ".vtt"
+	default:
+		return ".srt"
+	}
+}
+
+// Save écrit le document dans son format d'origine (path doit porter Ext()).
+func (s *Subtitle) Save(path string) error {
+	if err := s.doc.Write(path); err != nil {
+		return fmt.Errorf("subs: écriture %q: %w", path, err)
 	}
 	return nil
 }
@@ -112,11 +151,3 @@ func flatten(s string) string {
 	return strings.TrimSpace(s)
 }
 
-func textToLines(text string) []astisub.Line {
-	parts := strings.Split(text, "\n")
-	lines := make([]astisub.Line, 0, len(parts))
-	for _, p := range parts {
-		lines = append(lines, astisub.Line{Items: []astisub.LineItem{{Text: p}}})
-	}
-	return lines
-}

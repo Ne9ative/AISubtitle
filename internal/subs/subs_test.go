@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -77,7 +78,7 @@ Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Dialogue: 0,0:00:01.00,0:00:04.00,Default,,0,0,0,,Hello {\i1}world{\i0}
+Dialogue: 0,0:00:01.00,0:00:04.00,Default,,0,0,0,,{\pos(300,900)}Hello {\i1}world{\i0}
 Dialogue: 0,0:00:05.00,0:00:07.00,Default,,0,0,0,,Second line
 `
 
@@ -93,6 +94,38 @@ func TestOpenASSByContent(t *testing.T) {
 	want := []string{"Hello world", "Second line"}
 	if got := s.Texts(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("Texts() ASS = %v, attendu %v", got, want)
+	}
+}
+
+// Une source ASS doit ressortir en ASS, avec son positionnement {\pos} intact.
+func TestASSPreservesPositioning(t *testing.T) {
+	s, err := Open(writeTemp(t, "in.ass", sampleASS))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Ext() != ".ass" {
+		t.Fatalf("Ext() = %q, attendu .ass", s.Ext())
+	}
+	if err := s.SetTexts([]string{"Bonjour le monde", "Deuxieme ligne"}); err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(t.TempDir(), "out.ass")
+	if err := s.Save(out); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(out)
+	if !strings.Contains(string(data), `\pos(300,900)`) {
+		t.Fatalf("positionnement \\pos perdu:\n%s", data)
+	}
+	if !strings.Contains(string(data), "Bonjour le monde") {
+		t.Fatalf("traduction absente:\n%s", data)
+	}
+	s2, err := Open(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s2.Texts(); got[0] != "Bonjour le monde" {
+		t.Fatalf("relecture: %v", got)
 	}
 }
 
