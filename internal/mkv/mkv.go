@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/Ne9ative/AISubtitle/internal/winproc"
 )
 
 // Track décrit une piste de sous-titres d'un conteneur.
@@ -114,7 +116,7 @@ func run(ctx context.Context, name string, args ...string) ([]byte, error) {
 		return nil, fmt.Errorf("mkv: binaire non configuré")
 	}
 	cmd := exec.CommandContext(ctx, name, args...)
-	hideWindow(cmd)
+	winproc.HideWindow(cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
