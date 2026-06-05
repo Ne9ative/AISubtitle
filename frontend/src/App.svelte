@@ -8,37 +8,40 @@
 
   // Langues : valeur canonique (v, utilisée par le backend) + libellés localisés.
   const LANGS = [
+    // Les plus courantes en haut
     { v: "ANGLAIS", en: "English", fr: "Anglais" },
-    { v: "FRANÇAIS", en: "French", fr: "Français" },
     { v: "JAPONAIS", en: "Japanese", fr: "Japonais" },
     { v: "CHINOIS", en: "Chinese", fr: "Chinois" },
-    { v: "CORÉEN", en: "Korean", fr: "Coréen" },
-    { v: "THAÏ", en: "Thai", fr: "Thaï" },
-    { v: "VIETNAMIEN", en: "Vietnamese", fr: "Vietnamien" },
-    { v: "INDONÉSIEN", en: "Indonesian", fr: "Indonésien" },
-    { v: "MALAIS", en: "Malay", fr: "Malais" },
-    { v: "HINDI", en: "Hindi", fr: "Hindi" },
     { v: "ESPAGNOL", en: "Spanish", fr: "Espagnol" },
+    { v: "RUSSE", en: "Russian", fr: "Russe" },
+    { v: "FRANÇAIS", en: "French", fr: "Français" },
     { v: "PORTUGAIS", en: "Portuguese", fr: "Portugais" },
     { v: "ALLEMAND", en: "German", fr: "Allemand" },
-    { v: "ITALIEN", en: "Italian", fr: "Italien" },
-    { v: "RUSSE", en: "Russian", fr: "Russe" },
+    { sep: true },
+    // Le reste (ordre alphabétique anglais)
     { v: "ARABE", en: "Arabic", fr: "Arabe" },
-    { v: "TURC", en: "Turkish", fr: "Turc" },
-    { v: "NÉERLANDAIS", en: "Dutch", fr: "Néerlandais" },
-    { v: "POLONAIS", en: "Polish", fr: "Polonais" },
-    { v: "SUÉDOIS", en: "Swedish", fr: "Suédois" },
-    { v: "NORVÉGIEN", en: "Norwegian", fr: "Norvégien" },
+    { v: "TCHÈQUE", en: "Czech", fr: "Tchèque" },
     { v: "DANOIS", en: "Danish", fr: "Danois" },
+    { v: "NÉERLANDAIS", en: "Dutch", fr: "Néerlandais" },
+    { v: "FILIPINO", en: "Filipino", fr: "Filipino" },
     { v: "FINNOIS", en: "Finnish", fr: "Finnois" },
     { v: "GREC", en: "Greek", fr: "Grec" },
     { v: "HÉBREU", en: "Hebrew", fr: "Hébreu" },
-    { v: "TCHÈQUE", en: "Czech", fr: "Tchèque" },
+    { v: "HINDI", en: "Hindi", fr: "Hindi" },
     { v: "HONGROIS", en: "Hungarian", fr: "Hongrois" },
-    { v: "ROUMAIN", en: "Romanian", fr: "Roumain" },
-    { v: "UKRAINIEN", en: "Ukrainian", fr: "Ukrainien" },
+    { v: "INDONÉSIEN", en: "Indonesian", fr: "Indonésien" },
+    { v: "ITALIEN", en: "Italian", fr: "Italien" },
+    { v: "CORÉEN", en: "Korean", fr: "Coréen" },
+    { v: "MALAIS", en: "Malay", fr: "Malais" },
+    { v: "NORVÉGIEN", en: "Norwegian", fr: "Norvégien" },
     { v: "PERSAN", en: "Persian", fr: "Persan" },
-    { v: "FILIPINO", en: "Filipino", fr: "Filipino" },
+    { v: "POLONAIS", en: "Polish", fr: "Polonais" },
+    { v: "ROUMAIN", en: "Romanian", fr: "Roumain" },
+    { v: "SUÉDOIS", en: "Swedish", fr: "Suédois" },
+    { v: "THAÏ", en: "Thai", fr: "Thaï" },
+    { v: "TURC", en: "Turkish", fr: "Turc" },
+    { v: "UKRAINIEN", en: "Ukrainian", fr: "Ukrainien" },
+    { v: "VIETNAMIEN", en: "Vietnamese", fr: "Vietnamien" },
   ];
   const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 
@@ -362,13 +365,13 @@
       <label class="field">
         <span>{t.srcLang}</span>
         <select bind:value={srcLang} on:change={persist} disabled={running}>
-          {#each LANGS as l}<option value={l.v}>{l[uiLang]}</option>{/each}
+          {#each LANGS as l}{#if l.sep}<option disabled>──────────</option>{:else}<option value={l.v}>{l[uiLang]}</option>{/if}{/each}
         </select>
       </label>
       <label class="field">
         <span>{t.tgtLang}</span>
         <select bind:value={tgtLang} on:change={persist} disabled={running}>
-          {#each LANGS as l}<option value={l.v}>{l[uiLang]}</option>{/each}
+          {#each LANGS as l}{#if l.sep}<option disabled>──────────</option>{:else}<option value={l.v}>{l[uiLang]}</option>{/if}{/each}
         </select>
       </label>
     </div>
