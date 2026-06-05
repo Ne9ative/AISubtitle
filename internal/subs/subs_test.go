@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 )
 
 const sampleSRT = `1
@@ -63,5 +64,13 @@ func TestSetTextsAndSaveRoundtrip(t *testing.T) {
 	want := []string{"Bonjour le monde", "Deuxieme ligne"}
 	if got := s2.Texts(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("apres sauvegarde, Texts() = %v, attendu %v", got, want)
+	}
+}
+
+func TestLimitToDuration(t *testing.T) {
+	s, _ := Open(writeTemp(t, "in.srt", sampleSRT)) // cues à 1s et 5s
+	s.LimitToDuration(3 * time.Second)
+	if s.Len() != 1 {
+		t.Fatalf("attendu 1 cue après limite 3s, got %d", s.Len())
 	}
 }

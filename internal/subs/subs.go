@@ -3,6 +3,7 @@ package subs
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	astisub "github.com/asticode/go-astisub"
 )
@@ -53,6 +54,17 @@ func (s *Subtitle) SaveSRT(path string) error {
 		return fmt.Errorf("subs: écriture %q: %w", path, err)
 	}
 	return nil
+}
+
+// LimitToDuration ne conserve que les cues commençant avant d (mode Test 20 s).
+func (s *Subtitle) LimitToDuration(d time.Duration) {
+	kept := s.doc.Items[:0]
+	for _, it := range s.doc.Items {
+		if it.StartAt < d {
+			kept = append(kept, it)
+		}
+	}
+	s.doc.Items = kept
 }
 
 // itemText reconstruit le texte d'une cue à partir des LineItem (runs
