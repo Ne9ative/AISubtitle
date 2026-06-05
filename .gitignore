@@ -1,0 +1,53 @@
+# =====================================================================
+#  AI Subtitle Pro — .gitignore
+#  On ne versionne QUE le code source et la doc.
+#  Gros binaires, modèles et secrets restent hors dépôt.
+# =====================================================================
+
+# --- Secrets / config locale (contient la clé API !) ---
+config.json
+*.local.json
+
+# --- Modèles IA (plusieurs Go) ---
+models/
+*.gguf
+
+# --- Binaires externes embarqués (téléchargés/fournis localement) ---
+*.exe
+*.dll
+*.zip
+mkvtoolnix/
+llama/
+vendor-bin/
+
+# --- Cache d'extraction runtime ---
+/cache/
+/bin/
+
+# --- Ancien environnement Python ---
+venv/
+__pycache__/
+*.pyc
+
+# --- Outils de build CUDA (locaux) ---
+MSBuildExtensions/
+
+# --- Build Go ---
+/build/
+/dist/
+*.test
+*.out
+AISubtitlePro
+AISubtitlePro.exe
+
+# --- Wails / frontend ---
+node_modules/
+frontend/dist/
+frontend/node_modules/
+.wails/
+
+# --- OS / éditeurs ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
