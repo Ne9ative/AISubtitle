@@ -13,8 +13,9 @@ import (
 
 // Subtitle encapsule un document de sous-titres pour la traduction.
 type Subtitle struct {
-	doc    *astisub.Subtitles
-	format string // "srt", "ass" ou "vtt"
+	doc        *astisub.Subtitles
+	format     string // "srt", "ass" ou "vtt"
+	scriptInfo string // bloc [Script Info] original (ASS), préservé tel quel
 }
 
 // Open lit un fichier de sous-titres en détectant le format au CONTENU
@@ -29,7 +30,12 @@ func Open(path string) (*Subtitle, error) {
 	if err != nil {
 		return nil, fmt.Errorf("subs: analyse %q: %w", path, err)
 	}
-	return &Subtitle{doc: doc, format: format}, nil
+	s := &Subtitle{doc: doc, format: format}
+	if format == "ass" {
+		clean := bytes.TrimLeft(data, "\xef\xbb\xbf") // retirer un éventuel BOM UTF-8
+		s.scriptInfo = extractSection(string(clean), "[Script Info]")
+	}
+	return s, nil
 }
 
 func parse(data []byte) (*astisub.Subtitles, string, error) {
@@ -73,19 +79,30 @@ func (s *Subtitle) SetTexts(translated []string) error {
 	return nil
 }
 
-// setItemText remplace le texte affiché en CONSERVANT le 1er LineItem, qui
-// porte les balises de positionnement ASS ({\pos}, {\an}…) dans son SSAEffect.
-// Sans ça, l'ASS perdrait son placement à l'écran (lignes empilées en vrac).
+// setItemText remplace le texte affiché en rassemblant TOUTES les balises
+// d'override ASS d'origine ({\pos}, {\an7}, {\fs}…) — astisub les répartit dans
+// les SSAEffect de plusieurs LineItem — pour ne rien perdre du placement/style.
 func setItemText(it *astisub.Item, text string) {
 	text = strings.ReplaceAll(text, "\n", " ")
-	if len(it.Lines) > 0 && len(it.Lines[0].Items) > 0 {
-		first := it.Lines[0].Items[0]
-		first.Text = text
-		it.Lines = it.Lines[:1]
-		it.Lines[0].Items = []astisub.LineItem{first}
-		return
+	var tags strings.Builder
+	var base *astisub.StyleAttributes
+	for _, ln := range it.Lines {
+		for _, li := range ln.Items {
+			if li.InlineStyle != nil {
+				if base == nil {
+					base = li.InlineStyle
+				}
+				tags.WriteString(li.InlineStyle.SSAEffect)
+			}
+		}
 	}
-	it.Lines = []astisub.Line{{Items: []astisub.LineItem{{Text: text}}}}
+	out := astisub.LineItem{Text: text}
+	if base != nil {
+		clone := *base
+		clone.SSAEffect = tags.String()
+		out.InlineStyle = &clone
+	}
+	it.Lines = []astisub.Line{{Items: []astisub.LineItem{out}}}
 }
 
 // Ext renvoie l'extension du format source (.ass / .vtt / .srt).
@@ -101,11 +118,55 @@ func (s *Subtitle) Ext() string {
 }
 
 // Save écrit le document dans son format d'origine (path doit porter Ext()).
+// Pour l'ASS, on restaure le [Script Info] original : astisub perd des champs
+// comme ScaledBorderAndShadow, qui changent le rendu du contour/de la taille.
 func (s *Subtitle) Save(path string) error {
+	if s.format == "ass" && s.scriptInfo != "" {
+		var buf bytes.Buffer
+		if err := s.doc.WriteToSSA(&buf); err != nil {
+			return fmt.Errorf("subs: écriture ASS: %w", err)
+		}
+		merged := mergeScriptInfo(buf.String(), s.scriptInfo)
+		if err := os.WriteFile(path, []byte(merged), 0o644); err != nil {
+			return fmt.Errorf("subs: écriture %q: %w", path, err)
+		}
+		return nil
+	}
 	if err := s.doc.Write(path); err != nil {
 		return fmt.Errorf("subs: écriture %q: %w", path, err)
 	}
 	return nil
+}
+
+// extractSection renvoie le bloc d'une section ASS (ex. "[Script Info]"),
+// de son en-tête jusqu'à la section suivante (exclue).
+func extractSection(text, header string) string {
+	var out []string
+	in := false
+	for _, ln := range strings.Split(text, "\n") {
+		t := strings.TrimRight(ln, "\r")
+		if !in {
+			if strings.EqualFold(strings.TrimSpace(t), header) {
+				in = true
+				out = append(out, t)
+			}
+			continue
+		}
+		if strings.HasPrefix(strings.TrimSpace(t), "[") {
+			break
+		}
+		out = append(out, t)
+	}
+	return strings.Join(out, "\n")
+}
+
+// mergeScriptInfo remplace le [Script Info] généré par astisub par l'original.
+func mergeScriptInfo(assText, original string) string {
+	idx := strings.Index(assText, "[V4")
+	if original == "" || idx < 0 {
+		return assText
+	}
+	return strings.TrimRight(original, "\r\n") + "\n\n" + assText[idx:]
 }
 
 // SaveSRT écrit le document au format SRT (path doit finir par .srt).

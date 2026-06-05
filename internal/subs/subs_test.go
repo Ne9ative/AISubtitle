@@ -71,6 +71,9 @@ func TestSetTextsAndSaveRoundtrip(t *testing.T) {
 const sampleASS = `[Script Info]
 Title: Test
 ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
@@ -78,7 +81,7 @@ Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Dialogue: 0,0:00:01.00,0:00:04.00,Default,,0,0,0,,{\pos(300,900)}Hello {\i1}world{\i0}
+Dialogue: 0,0:00:01.00,0:00:04.00,Default,,0,0,0,,{\pos(300,900)}{\an7}Hello {\i1}world{\i0}
 Dialogue: 0,0:00:05.00,0:00:07.00,Default,,0,0,0,,Second line
 `
 
@@ -116,6 +119,12 @@ func TestASSPreservesPositioning(t *testing.T) {
 	data, _ := os.ReadFile(out)
 	if !strings.Contains(string(data), `\pos(300,900)`) {
 		t.Fatalf("positionnement \\pos perdu:\n%s", data)
+	}
+	if !strings.Contains(string(data), `\an7`) {
+		t.Fatalf("alignement \\an7 perdu:\n%s", data)
+	}
+	if !strings.Contains(string(data), "ScaledBorderAndShadow: yes") {
+		t.Fatalf("ScaledBorderAndShadow perdu:\n%s", data)
 	}
 	if !strings.Contains(string(data), "Bonjour le monde") {
 		t.Fatalf("traduction absente:\n%s", data)
